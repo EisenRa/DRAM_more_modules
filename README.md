@@ -1,5 +1,5 @@
 # DRAM
-[![CircleCI](https://circleci.com/gh/WrightonLabCSU/DRAM/tree/master.svg?style=svg)](https://circleci.com/gh/WrightonLabCSU/DRAM/tree/master)
+[![Build Status](https://travis-ci.com/shafferm/checkMetab.svg?branch=master)](https://travis-ci.com/shafferm/checkMetab)
 
 DRAM (Distilled and Refined Annotation of Metabolism) is a tool for annotating metagenomic assembled genomes and [VirSorter](https://github.com/simroux/VirSorter) identified viral contigs. DRAM annotates MAGs and viral contigs using [KEGG](https://www.kegg.jp/) (if provided by the user), [UniRef90](https://www.uniprot.org/), [PFAM](https://pfam.xfam.org/), [dbCAN](http://bcb.unl.edu/dbCAN2/), [RefSeq viral](https://www.ncbi.nlm.nih.gov/genome/viruses/), [VOGDB](http://vogdb.org/) and the [MEROPS](https://www.ebi.ac.uk/merops/) peptidase database as well as custom user databases. DRAM is run in two stages. First an annotation step to assign database identifiers to gene and then a distill step to curate these annotations into useful functional categories. Additionally viral contigs are further analyzed during to identify potential AMGs. This is done via assigning an auxiliary score and flags representing the confidence that a gene is both metabolic and viral.
 
@@ -11,7 +11,7 @@ To install DRAM some dependencies need to be installed first then DRAM can be in
 _Conda Installation_
 
 Install DRAM into a new [conda](https://docs.conda.io/en/latest/) environment using the provided 
-environment.yaml file.
+enviornment.yaml file.
 ```bash
 wget https://raw.githubusercontent.com/shafferm/DRAM/master/environment.yaml
 conda env create -f environment.yaml -n DRAM

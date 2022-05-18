@@ -6,7 +6,7 @@ from mag_annotator.annotate_bins import annotate_bins_cmd, annotate_called_genes
 from mag_annotator.summarize_genomes import summarize_genomes
 from mag_annotator.pull_sequences import pull_sequences, get_gene_neighborhoods
 
-# TODO: refactor parsers to limit duplication
+# TODO: refactor parses to limit duplication
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     # parser for annotating mags, you know the real thing
     # TODO: add don't rename flag and give warning that all contig names must be unique
-    annotate_parser.add_argument('-i', '--input_fasta', action='append',
+    annotate_parser.add_argument('-i', '--input_fasta',
                                  help="fasta file, optionally with wildcards to point to multiple fastas",
                                  required=True)
     annotate_parser.add_argument('-o', '--output_dir', help="output directory")
@@ -53,27 +53,17 @@ if __name__ == '__main__':
                                       'recommended cutoffs. This will be ignored if annotating with KEGG Genes.')
     annotate_parser.add_argument('--custom_db_name', action='append', help="Names of custom databases, can be used"
                                                                            "multiple times.")
-    annotate_parser.add_argument('--custom_fasta_loc', action='append', default=[], # empty list is not bug, can't be changed
-                                 help="Location of fastas to annotate against, can be used multiple times but"
+    annotate_parser.add_argument('--custom_fasta_loc', action='append',
+                                 help="Location of fastas to annotated against, can be used multiple times but"
                                       "must match nubmer of custom_db_name's")
-    annotate_parser.add_argument('--custom_hmm_name', action='append',  default=[], # empty list is not bug, can't be changed
-                                 help="Names of custom hmm databases, can be used multiple times.")
-    annotate_parser.add_argument('--custom_hmm_loc', action='append', default=[], # empty list is not bug, can't be changed
-                                 help="Location of hmms to annotate against, can be used multiple times but"
-                                      "must match nubmer of custom_hmm_name's")
-    annotate_parser.add_argument('--custom_hmm_cutoffs_loc', action='append', default=[], # empty list is not bug, can't be changed
-                                 help="Location of file with custom HMM cutoffs and descriptions, can be used "
-                                      "multiple times.")
-    annotate_parser.add_argument('--gtdb_taxonomy', action='append', default=[], # empty list is not bug, can't be changed
+    annotate_parser.add_argument('--gtdb_taxonomy', action='append', default=[],
                                  help='Summary file from gtdbtk taxonomy assignment from bins, can be used multiple'
                                       'times')
-    annotate_parser.add_argument('--checkm_quality', action='append', default=[], # empty list is not bug, can't be changed
+    annotate_parser.add_argument('--checkm_quality', action='append', default=[],
                                  help='Summary of of checkM quality assessment from bins, can be used multiple times')
     annotate_parser.add_argument('--use_uniref', action='store_true', default=False,
-                                 help='Annotate these fastas against UniRef, drastically increases run time and memory '
+                                 help='Annotate these fastas against UniRef, drastically decreases run time and memory '
                                       'requirements')
-    annotate_parser.add_argument('--use_vogdb', action='store_true', default=False,
-                                 help='Annotate these fastas against VOGDB, drastically decreases run time')
     annotate_parser.add_argument('--low_mem_mode', action='store_true', default=False,
                                  help='Skip annotating with uniref and use kofam instead of KEGG genes even if '
                                       'provided. Drastically decreases memory usage')
@@ -84,7 +74,7 @@ if __name__ == '__main__':
     annotate_parser.set_defaults(func=annotate_bins_cmd)
 
     # parser for annotating already called genes
-    annotate_genes_parser.add_argument('-i', '--input_faa', help="fasta file, optionally with wildcards to point to "
+    annotate_genes_parser.add_argument('-i', '--input_faa', help="fasta file, optionally with wildcards to point to"
                                                                  "individual MAGs", required=True)
     annotate_genes_parser.add_argument('-o', '--output_dir', help="output directory")
     annotate_genes_parser.add_argument('--bit_score_threshold', type=int, default=60,
@@ -94,21 +84,13 @@ if __name__ == '__main__':
     annotate_genes_parser.add_argument('--kofam_use_dbcan2_thresholds', action='store_true', default=False,
                                        help='Use dbcan2 suggested HMM cutoffs for KOfam annotation instead of KOfam '
                                             'recommended cutoffs. This will be ignored if annotating with KEGG Genes.')
-    annotate_genes_parser.add_argument('--custom_db_name', action='append', default=[], # empty list is not bug, can't be changed
-                                       help="Names of custom databases, can be used multiple times.")
-    annotate_genes_parser.add_argument('--custom_fasta_loc', action='append', default=[], # empty list is not bug, can't be changed
-                                       help="Location of fastas to annotate against, can be used multiple times but"
+    annotate_genes_parser.add_argument('--custom_db_name', action='append', help="Names of custom databases, can be "
+                                                                                 "used multiple times.")
+    annotate_genes_parser.add_argument('--custom_fasta_loc', action='append',
+                                       help="Location of fastas to annotated against, can be used multiple times but"
                                             "must match nubmer of custom_db_name's")
-    annotate_genes_parser.add_argument('--custom_hmm_name', action='append', default=[], # empty list is not bug, can't be changed
-                                       help="Names of custom hmm databases, can be used multiple times.")
-    annotate_genes_parser.add_argument('--custom_hmm_loc', action='append', default=[], # empty list is not bug, can't be changed
-                                       help="Location of hmms to annotate against, can be used multiple times but"
-                                            "must match nubmer of custom_hmm_name's")
-    annotate_genes_parser.add_argument('--custom_hmm_cutoffs_loc', action='append', default=[], # empty list is not bug, can't be changed
-                                       help="Location of file with custom HMM cutoffs and descriptions, can be used "
-                                            "multiple times.")
     annotate_genes_parser.add_argument('--use_uniref', action='store_true', default=False,
-                                       help='Annotate these fastas against UniRef, drastically increases run time and '
+                                       help='Annotate these fastas against UniRef, drastically decreases run time and '
                                             'memory requirements')
     annotate_genes_parser.add_argument('--low_mem_mode', action='store_true', default=False,
                                        help='Skip annotating with uniref and use kofam instead of KEGG genes even if '
@@ -149,7 +131,6 @@ if __name__ == '__main__':
     annotation_group.add_argument('--identifiers', nargs='*', default=None, help='database identifiers to keep')
     annotation_group.add_argument('--categories', nargs='*', default=None,
                                   help='distillate categories to keep genes from')
-    annotation_group.add_argument('--custom_distillate', help="Custom distillate form to add your own modules")
     dram_group = strainer_parser.add_argument_group('DRAM based filters')
     dram_group.add_argument('--taxonomy', nargs='*', default=None,
                             help='Level of GTDBTk taxonomy to keep (e.g. c__Clostridia), space separated list')
@@ -165,7 +146,6 @@ if __name__ == '__main__':
     neighborhood_parser.add_argument("--genes", nargs='*', help="Gene names from DRAM to find neighborhoods around")
     neighborhood_parser.add_argument("--identifiers", nargs='*',
                                      help="Database identifiers assigned by DRAM to find neighborhoods around")
-    neighborhood_parser.add_argument('--custom_distillate', help="Custom distillate form to add your own modules")
     neighborhood_parser.add_argument("--categories", help="Distillate categories to build gene neighborhoods around.")
     neighborhood_parser.add_argument("--genes_loc", help="Location of genes.fna/genes.faa file to filter to "
                                                          "neighborhoods")
@@ -178,7 +158,6 @@ if __name__ == '__main__':
     neighborhood_parser.set_defaults(func=get_gene_neighborhoods)
 
     # parser for merging annotations
-    # TODO: Make it work with append so you can use multiple -i's
     merge_annotations_parser.add_argument("-i", "--input_dirs", help="Path with wildcards pointing to DRAM annotation "
                                                                      "output directories")
     merge_annotations_parser.add_argument("-o", "--output_dir", help="Path to output merged annotations files")

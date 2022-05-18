@@ -30,8 +30,6 @@ if __name__ == '__main__':
     annotate_parser.add_argument('-o', '--output_dir', help="output directory")
     annotate_parser.add_argument('--min_contig_size', type=int, default=2500,
                                  help='minimum contig size to be used for gene prediction')
-    annotate_parser.add_argument('--split_contigs', action='store_true', default=False,
-                                 help='Split contigs from input fasta into separate')
     prodigal_mode_choices = ['train', 'meta', 'single']
     annotate_parser.add_argument('--prodigal_mode', type=str, default='meta', choices=prodigal_mode_choices,
                                  help='Mode of prodigal to use for gene calling. NOTE: normal or single mode require '
@@ -48,21 +46,13 @@ if __name__ == '__main__':
     annotate_parser.add_argument('--kofam_use_dbcan2_thresholds', action='store_true', default=False,
                                  help='Use dbcan2 suggested HMM cutoffs for KOfam annotation instead of KOfam '
                                       'recommended cutoffs. This will be ignored if annotating with KEGG Genes.')
-    annotate_parser.add_argument('--custom_db_name', action='append', default=[], # empty list is not bug, can't be changed
-                                 help="Names of custom databases, can be used multiple times.")
-    annotate_parser.add_argument('--custom_fasta_loc', action='append', default=[], # empty list is not bug, can't be changed
-                                 help="Location of fastas to annotate against, can be used multiple times but"
+    annotate_parser.add_argument('--custom_db_name', action='append', help="Names of custom databases, can be used"
+                                                                           "multiple times.")
+    annotate_parser.add_argument('--custom_fasta_loc', action='append',
+                                 help="Location of fastas to annotated against, can be used multiple times but"
                                       "must match nubmer of custom_db_name's")
-    annotate_parser.add_argument('--custom_hmm_name', action='append',  default=[], # empty list is not bug, can't be changed
-                                 help="Names of custom hmm databases, can be used multiple times.")
-    annotate_parser.add_argument('--custom_hmm_loc', action='append',  default=[], # empty list is not bug, can't be changed
-                                 help="Location of hmms to annotate against, can be used multiple times but"
-                                      "must match nubmer of custom_hmm_name's")
-    annotate_parser.add_argument('--custom_hmm_cutoffs_loc', action='append',
-                                       help="Location of file with custom HMM cutoffs and descriptions, can be used "
-                                            "multiple times.")
     annotate_parser.add_argument('--use_uniref', action='store_true', default=False,
-                                 help='Annotate these fastas against UniRef, drastically increases run time and memory '
+                                 help='Annotate these fastas against UniRef, drastically decreases run time and memory '
                                       'requirements')
     annotate_parser.add_argument('--low_mem_mode', action='store_true', default=False,
                                  help='Skip annotating with uniref and use kofam instead of KEGG genes even if '

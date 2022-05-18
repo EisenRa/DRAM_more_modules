@@ -8,8 +8,7 @@ import re
 import numpy as np
 from datetime import datetime
 
-from mag_annotator.database_handler import DatabaseHandler
-from mag_annotator.utils import get_ids_from_annotation, get_ids_from_row, get_ordered_uniques
+from mag_annotator.utils import get_database_locs, get_ids_from_annotation, get_ids_from_row
 
 # TODO: add RBH information to output
 # TODO: add flag to output table and not xlsx
@@ -25,6 +24,12 @@ KO_REGEX = r'^K\d\d\d\d\d$'
 ETC_COVERAGE_COLUMNS = ['module_id', 'module_name', 'complex', 'genome', 'path_length', 'path_length_coverage',
                         'percent_coverage', 'genes', 'missing_genes', 'complex_module_name']
 TAXONOMY_LEVELS = ['d', 'p', 'c', 'o', 'f', 'g', 's']
+
+
+def get_ordered_uniques(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
 
 def fill_genome_summary_frame(annotations, genome_summary_frame, groupby_column):
@@ -109,7 +114,8 @@ def summarize_trnas(trnas_df, groupby_column='fasta'):
     return trna_frame
 
 
-def make_genome_summary(annotations, genome_summary_frame, trna_frame=None, rrna_frame=None, groupby_column='fasta'):
+def make_genome_summary(annotations, genome_summary_frame, trna_frame=None, rrna_frame=None,
+                        groupby_column='fasta'):
     summary_frames = list()
     # get ko summaries
     summary_frames.append(fill_genome_summary_frame(annotations, genome_summary_frame.copy(), groupby_column))
@@ -239,8 +245,7 @@ def get_module_step_coverage(kos, module_net):
 
 def make_module_coverage_df(annotation_df, module_nets):
     kos_to_genes = defaultdict(list)
-    ko_id_name = 'kegg_id' if 'kegg_id' in annotation_df.columns else 'ko_id'
-    for gene_id, ko_list in annotation_df[ko_id_name].iteritems():
+    for gene_id, ko_list in annotation_df['kegg_id'].iteritems():
         if type(ko_list) is str:
             for ko in ko_list.split(','):
                 kos_to_genes[ko].append(gene_id)
@@ -309,9 +314,9 @@ def split_into_steps(definition, split_char=' '):
     curr_level = 0
     step_starts = [-1]
     for i, char in enumerate(definition):
-        if char == '(':
+        if char is '(':
             curr_level += 1
-        if char == ')':
+        if char is ')':
             curr_level -= 1
         if (curr_level == 0) and (char in split_char):
             step_starts.append(i)
@@ -570,22 +575,22 @@ def summarize_genomes(input_file, trna_path=None, rrna_path=None, output_dir='.'
         rrna_frame = pd.read_csv(rrna_path, sep='\t')
 
     # get db_locs and read in dbs
-    database_handler = DatabaseHandler()
-    if 'genome_summary_form' not in database_handler.dram_sheet_locs:
+    db_locs = get_database_locs()
+    if 'genome_summary_form' not in db_locs:
         raise ValueError('Genome summary form location must be set in order to summarize genomes')
-    if 'module_step_form' not in database_handler.dram_sheet_locs:
+    if 'module_step_form' not in db_locs:
         raise ValueError('Module step form location must be set in order to summarize genomes')
-    if 'function_heatmap_form' not in database_handler.dram_sheet_locs:
+    if 'function_heatmap_form' not in db_locs:
         raise ValueError('Functional heat map form location must be set in order to summarize genomes')
 
     # read in dbs
-    genome_summary_form = pd.read_csv(database_handler.dram_sheet_locs['genome_summary_form'], sep='\t')
+    genome_summary_form = pd.read_csv(db_locs['genome_summary_form'], sep='\t')
     if custom_distillate is not None:
         genome_summary_form = pd.concat([genome_summary_form, pd.read_csv(custom_distillate, sep='\t')])
     genome_summary_form = genome_summary_form.drop('potential_amg', axis=1)
-    module_steps_form = pd.read_csv(database_handler.dram_sheet_locs['module_step_form'], sep='\t')
-    function_heatmap_form = pd.read_csv(database_handler.dram_sheet_locs['function_heatmap_form'], sep='\t')
-    etc_module_df = pd.read_csv(database_handler.dram_sheet_locs['etc_module_database'], sep='\t')
+    module_steps_form = pd.read_csv(db_locs['module_step_form'], sep='\t')
+    function_heatmap_form = pd.read_csv(db_locs['function_heatmap_form'], sep='\t')
+    etc_module_df = pd.read_csv(db_locs['etc_module_database'], sep='\t')
     print('%s: Retrieved database locations and descriptions' % (str(datetime.now() - start_time)))
 
     # make output folder

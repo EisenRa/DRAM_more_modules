@@ -4,9 +4,8 @@ import os
 import json
 import pandas as pd
 
-from mag_annotator.utils import run_process, make_mmseqs_db, merge_files, multigrep, remove_prefix, remove_suffix, \
-    get_ids_from_row
-from mag_annotator.pull_sequences import get_genes_from_identifiers
+from mag_annotator.utils import run_process, make_mmseqs_db, merge_files, multigrep, get_database_locs, \
+    get_config_loc, remove_prefix, remove_suffix, get_ids_from_row, get_genes_from_identifiers
 
 
 def test_run_process():
@@ -86,6 +85,18 @@ def test_multigrep(multigrep_inputs):
     assert dict_['gene5'] == 'gene5 data including gene5'
 
 
+def test_get_config_loc():
+    test_config_loc = get_config_loc()
+    assert os.path.isfile(test_config_loc)
+    assert type(json.loads(open(test_config_loc).read())) is dict
+
+
+def test_get_database_locs():
+    test_database_locs = get_database_locs()
+    assert type(test_database_locs) is dict
+    assert 'description_db' in test_database_locs
+
+
 def test_remove_prefix():
     assert remove_prefix('prefix', 'pre') == 'fix'
     assert remove_prefix('postfix', 'pre') == 'postfix'
@@ -97,7 +108,7 @@ def test_remove_suffix():
 
 
 def test_get_ids_from_row():
-    id_set1 = get_ids_from_row(pd.Series({'ko_id': 'K00001,K00003'}))
+    id_set1 = get_ids_from_row(pd.Series({'kegg_id': 'K00001,K00003'}))
     assert id_set1 == {'K00001', 'K00003'}
     id_set2 = get_ids_from_row(pd.Series({'kegg_hit': 'Some text and then [EC:0.0.0.0]; also [EC:1.1.1.1]'}))
     assert id_set2 == {'EC:0.0.0.0', 'EC:1.1.1.1'}
@@ -118,7 +129,7 @@ def annotations():
                          ['bin.2', 'scaffold_1', None],
                          ['bin.2', 'scaffold_1', 'K00001,K13954']],
                         index=['gene1', 'gene2', 'gene3', 'gene4', 'gene5', 'gene6', 'gene7', 'gene8'],
-                        columns=['fasta', 'scaffold', 'ko_id'])
+                        columns=['fasta', 'scaffold', 'kegg_id'])
 
 
 def test_get_genes_from_identifiers(annotations):

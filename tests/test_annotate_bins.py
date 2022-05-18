@@ -12,60 +12,19 @@ import pandas as pd
 from skbio.io import read as read_sequence
 
 from mag_annotator.utils import make_mmseqs_db
-from mag_annotator.database_handler import DatabaseHandler
-from mag_annotator.database_setup import DbcanDescription, create_description_db
 from mag_annotator.annotate_bins import filter_fasta, run_prodigal, get_best_hits, \
     get_reciprocal_best_hits, process_reciprocal_best_hits, get_kegg_description, get_uniref_description, \
-    get_basic_description, get_peptidase_description, get_sig_row, get_gene_data, get_unannotated, assign_grades, \
+    get_basic_description, get_peptidase_description, get_sig, get_gene_data, get_unannotated, assign_grades, \
     generate_annotated_fasta, create_annotated_fasta, generate_renamed_fasta, rename_fasta, run_trna_scan, \
     run_barrnap, do_blast_style_search, count_motifs, strip_endings, process_custom_dbs, get_dups, \
     parse_hmmsearch_domtblout, annotate_gff, make_gbk_from_gff_and_fasta, make_trnas_interval, make_rrnas_interval,\
-    add_intervals_to_gff, vogdb_hmmscan_formater, generic_hmmscan_formater, dbcan_hmmscan_formater, \
-    kofam_hmmscan_formater
-
-
-
-@pytest.fixture()
-def db_handler():
-    return DatabaseHandler(path.join('tests', 'data', 'test_CONFIG'))
-
-
-@pytest.fixture()
-def db_handler_with_dbcan(tmpdir):
-    db_handler = DatabaseHandler(os.path.join('tests', 'data', 'test_CONFIG'))
-    test_db = os.path.join(tmpdir.mkdir('test_db'), 'test_db.sqlite')
-    create_description_db(test_db)
-    db_handler.description_loc = test_db
-    db_handler.start_db_session()
-    dbcan_entries = [{'id': 'GT4', 'description': 'The first description'},
-                     {'id': 'GT5', 'description': 'The second description'},
-                     {'id': 'GH1', 'description': 'A lone description'},
-                     ]
-    db_handler.add_descriptions_to_database(dbcan_entries, 'dbcan_description')
-    #assert len(db_handler.session.query(DbcanDescription).all()) == 3
-    return db_handler
+    add_intervals_to_gff, filter_db_locs
 
 
 @pytest.fixture()
 def fasta_loc():
     return os.path.join('tests', 'data', 'NC_001422.fasta')
 
-
-def test_dbcan_hmmscan_formater(db_handler_with_dbcan):
-    # TODO can we test with db-handler?
-    output_expt = pd.DataFrame({
-        "bin_1.scaffold_1": ["GT4; GT5", 'The first description; The second description'],
-        "bin_1.scaffold_2": ["GH1", 'A lone description']}, 
-                               index=["cazy_id", "cazy_hits"]).T
-    input_b6 = os.path.join('tests', 'data', 'unformatted_cazy.b6')
-    hits = parse_hmmsearch_domtblout(input_b6)
-    output_rcvd = dbcan_hmmscan_formater(hits=hits, db_name='cazy', 
-                                         db_handler=db_handler_with_dbcan)
-    #hits.sort_values('full_evalue').drop_duplicates(subset=["query_id"])
-    # output_rcvd
-    output_rcvd.sort_index(inplace=True)
-    output_expt.sort_index(inplace=True)
-    assert output_rcvd.equals(output_expt), "Error in dbcan_hmmscan_formater"
 
 def test_filter_fasta(fasta_loc, tmpdir):
     filtered_seq_5000 = filter_fasta(fasta_loc, min_len=5000)
@@ -176,12 +135,9 @@ def test_get_kegg_description():
                       ['aar:Acear_1520', 10e-10]]
     kegg_hits = pd.DataFrame(kegg_hits_data, index=['gene1', 'gene2', 'gene3'], columns=['kegg_hit', 'eVal'])
     kegg_hits_add_description = get_kegg_description(kegg_hits, header_dict)
-    print(kegg_hits_add_description.head())
-    assert kegg_hits_add_description.shape == (3, 4)
-    assert kegg_hits_add_description.loc['gene2', 'ko_id'] == 'K05810'
-    assert kegg_hits_add_description.loc['gene2', 'kegg_genes_id'] == 'aar:Acear_0854'
-    assert kegg_hits_add_description.loc['gene1', 'ko_id'] == ''
-    assert kegg_hits_add_description.loc['gene1', 'kegg_genes_id'] == 'aad:TC41_2367'
+    assert kegg_hits_add_description.shape == (3, 3)
+    assert kegg_hits_add_description.loc['gene2', 'kegg_id'] == 'K05810'
+    assert kegg_hits_add_description.loc['gene1', 'kegg_id'] == ''
 
 
 def test_get_uniref_description():
@@ -226,11 +182,11 @@ def test_get_peptidase_description():
                                                                            ' YP_611907~'
 
 
-def test_get_sig_row():
-    names = ['target_start', 'target_end', 'target_length', 'full_evalue']
-    assert not get_sig_row(pd.Series([1, 85, 100, 1], index=names))
-    assert get_sig_row(pd.Series([1, 86, 100, 1e-16], index=names))
-    assert not get_sig_row(pd.Series([1, 29, 100, 1e-20], index=names))
+def test_get_sig():
+    assert not get_sig(1, 85, 100, 1)
+    assert get_sig(1, 86, 100, 1e-16)
+    assert not get_sig(1, 29, 100, 1e-20)
+
 
 @pytest.fixture()
 def phix_prodigal_genes():
@@ -304,11 +260,11 @@ def test_assign_grades():
     annotations = pd.DataFrame(annotations_data, index=['gene1', 'gene2', 'gene3', 'gene4', 'gene5'],
                                columns=['kegg_RBH', 'kegg_hit', 'uniref_RBH', 'uniref_hit', 'pfam_hits'])
     test_grades = assign_grades(annotations)
-    assert test_grades.loc['gene1', 'rank'] == 'A'
-    assert test_grades.loc['gene2', 'rank'] == 'B'
-    assert test_grades.loc['gene3', 'rank'] == 'C'
-    assert test_grades.loc['gene4', 'rank'] == 'E'
-    assert test_grades.loc['gene5', 'rank'] == 'D'
+    assert test_grades.loc['gene1'] == 'A'
+    assert test_grades.loc['gene2'] == 'B'
+    assert test_grades.loc['gene3'] == 'C'
+    assert test_grades.loc['gene4'] == 'E'
+    assert test_grades.loc['gene5'] == 'D'
     # test no uniref
     annotations_data2 = [[True, 'K00001', ['PF00001']],
                          [False, 'K00002', ['PF01234']],
@@ -318,11 +274,11 @@ def test_assign_grades():
     annotations2 = pd.DataFrame(annotations_data2, index=['gene1', 'gene2', 'gene3', 'gene4', 'gene5'],
                                 columns=['kegg_RBH', 'kegg_hit', 'pfam_hits'])
     test_grades2 = assign_grades(annotations2)
-    assert test_grades2.loc['gene1', 'rank'] == 'A'
-    assert test_grades2.loc['gene2', 'rank'] == 'C'
-    assert test_grades2.loc['gene3', 'rank'] == 'C'
-    assert test_grades2.loc['gene4', 'rank'] == 'E'
-    assert test_grades2.loc['gene5', 'rank'] == 'D'
+    assert test_grades2.loc['gene1'] == 'A'
+    assert test_grades2.loc['gene2'] == 'C'
+    assert test_grades2.loc['gene3'] == 'C'
+    assert test_grades2.loc['gene4'] == 'E'
+    assert test_grades2.loc['gene5'] == 'D'
 
 
 @pytest.fixture()
@@ -504,93 +460,12 @@ def fake_phix_annotations():
 def fake_gff_loc():
     return os.path.join('tests', 'data', 'fake_gff.gff')
 
-#TODO
+
 def test_annotate_gff(annotated_fake_gff_loc, fake_phix_annotations, fake_gff_loc, tmpdir):
     gff_output = tmpdir.mkdir('gff_annotate')
     test_annotated_gff_loc = os.path.join(gff_output, 'annotated.gff')
     annotate_gff(fake_gff_loc, test_annotated_gff_loc, fake_phix_annotations, 'fake')
     assert cmp(annotated_fake_gff_loc, test_annotated_gff_loc)
-
-
-def test_kofam_hmmscan_formater_dbcan():
-    output_expt = pd.DataFrame({
-        "bin_1.scaffold_1": ["K00001", "KO1; description 1"],
-        "bin_1.scaffold_2": ["K00002", "KO2; description 2"]
-    }, index=["ko_id", "kegg_hit"]).T
-    input_b6 = os.path.join('tests', 'data', 'unformatted_kofam.b6')
-    hits = parse_hmmsearch_domtblout(input_b6)
-    output_rcvd = kofam_hmmscan_formater(
-        hits=hits,
-        hmm_info_path=os.path.join('tests', 'data', 'hmm_thresholds.txt'),
-        top_hit=True,
-        use_dbcan2_thresholds=True)
-    output_rcvd.sort_index(inplace=True)
-    output_expt.sort_index(inplace=True)
-    assert output_rcvd.equals(output_expt), "Error in kofam_hmmscan_formater with dbcam cuts"
-
-
-def test_kofam_hmmscan_formater():
-    output_expt = pd.DataFrame({
-        "bin_1.scaffold_2": ["K00002", "KO2; description 2"]
-    }, index=["ko_id", "kegg_hit"]).T
-    input_b6 = os.path.join('tests', 'data', 'unformatted_kofam.b6')
-    hits = parse_hmmsearch_domtblout(input_b6)
-    output_rcvd = kofam_hmmscan_formater(
-        hits=hits,
-        hmm_info_path=os.path.join('tests', 'data', 'hmm_thresholds.txt'),
-        top_hit=True,
-        use_dbcan2_thresholds=False)
-    output_rcvd.sort_index(inplace=True)
-    output_expt.sort_index(inplace=True)
-    assert output_rcvd.equals(output_expt), "Error in kofam_hmmscan_formater"
-
-
-def test_generic_hmmscan_formater_custom_cuts():
-    output_expt = pd.DataFrame({
-        "bin_1.scaffold_2": ["K00002", "KO2; description 2"]
-    }, index=["test_id", "test_hits"]).T
-    input_b6 = os.path.join('tests', 'data', 'unformatted_kofam.b6')
-    hits = parse_hmmsearch_domtblout(input_b6)
-    output_rcvd = generic_hmmscan_formater(
-        hits,
-        hmm_info_path=os.path.join('tests', 'data', 'hmm_thresholds.txt'),
-        db_name='test',
-        top_hit=True)
-    output_rcvd.sort_index(inplace=True)
-    output_expt.sort_index(inplace=True)
-    assert output_rcvd.equals(output_expt), "Error in generic_hmmscan_formater, with custom cuts"
-
-
-def test_generic_hmmscan_formater():
-    output_expt = pd.DataFrame({
-        "bin_1.scaffold_1": ["K00001"],
-        "bin_1.scaffold_2": ["K00002"]
-    }, index=["test_id"]).T
-    input_b6 = os.path.join('tests', 'data', 'unformatted_kofam.b6')
-    hits = parse_hmmsearch_domtblout(input_b6)
-    output_rcvd = generic_hmmscan_formater(
-        hits,
-        db_name='test',
-        top_hit=True)
-    output_rcvd.sort_index(inplace=True)
-    output_expt.sort_index(inplace=True)
-    assert output_rcvd.equals(output_expt), "Error in generic_hmmscan_formater"
-
-
-def test_vogdb_hmmscan_formater():
-    #TODO Not Done
-    output_expt = pd.DataFrame({
-        "bin_1.scaffold_1": "VOG00001",
-        "bin_1.scaffold_2": "VOG00002"
-    }, index=["vogdb_id"]).T
-    input_b6 = os.path.join('tests', 'data', 'unformatted_vogdb.b6')
-    hits = parse_hmmsearch_domtblout(input_b6)
-    output_rcvd = vogdb_hmmscan_formater(hits=hits, db_name='vogdb')
-    output_rcvd.sort_index(inplace=True)
-    output_expt.sort_index(inplace=True)
-    assert output_rcvd.equals(output_expt), "Error in vogdb_hmmscan_formater"
-
-
 
 
 test_gbk = """LOCUS       NC_001422.1   5386 bp   DNA   linear   ENV   %s
@@ -796,3 +671,16 @@ def test_add_intervals_to_gff(annotated_fake_gff_loc, tmpdir):
     gff = list(read_sequence(annotate_fake_gff_loc_w_rna, format='gff3'))
     assert type(gff) is list
     assert open(annotate_fake_gff_loc_w_rna).read() == annotated_fake_gff_w_rna
+
+
+def test_filter_db_locs():
+    test1 = filter_db_locs({'uniref': 'a fake locations', 'kegg': '/a/fake/loc', 'viral': ''})
+    assert test1 == {'kegg': '/a/fake/loc'}
+    with pytest.raises(ValueError):
+        test2 = filter_db_locs({'uniref': 'a fake locations', 'kegg': '/a/fake/loc', 'viral': ''}, low_mem_mode=True)
+    test3 = filter_db_locs({'kofam': '1', 'kofam_ko_list': '2', 'kegg': '/a/fake/loc', 'viral': ''}, low_mem_mode=True)
+    assert test3 == {'kofam': '1', 'kofam_ko_list': '2'}
+    test4 = filter_db_locs({'uniref': 'a fake locations', 'kegg': '/a/fake/loc', 'viral': ''}, use_uniref=True)
+    assert test4 == {'uniref': 'a fake locations', 'kegg': '/a/fake/loc'}
+    test5 = filter_db_locs({'kegg': '/a/fake/loc', 'viral': ''}, use_uniref=True)
+    assert test5 == {'kegg': '/a/fake/loc'}

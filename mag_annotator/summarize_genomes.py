@@ -252,7 +252,8 @@ def get_module_step_coverage(kos, module_net):
 
 def make_module_coverage_df(annotation_df, module_nets):
     kos_to_genes = defaultdict(list)
-    for gene_id, ko_list in annotation_df['kegg_id'].iteritems():
+    ko_id_name = 'kegg_id' if 'kegg_id' in annotation_df.columns else 'ko_id'
+    for gene_id, ko_list in annotation_df[ko_id_name].iteritems():
         if type(ko_list) is str:
             for ko in ko_list.split(','):
                 kos_to_genes[ko].append(gene_id)
